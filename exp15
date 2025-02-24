@@ -1,0 +1,119 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+char *input;
+int i = 0;
+char lasthandle[6], stack[50];
+char handles[][5] = { ")E(", "E*E", "E+E", "i", "E^E" };
+int top = 0;
+
+char prec[9][9] = {
+    /* Input symbols */
+    /* +    -    *    /    ^    i    (    )    $ */
+    { '>', '>', '<', '<', '<', '<', '<', '>', '>' }, // +
+    { '>', '>', '<', '<', '<', '<', '<', '>', '>' }, // -
+    { '>', '>', '>', '>', '<', '<', '<', '>', '>' }, // *
+    { '>', '>', '>', '>', '<', '<', '<', '>', '>' }, // /
+    { '>', '>', '>', '>', '>', '<', '<', '>', '>' }, // ^
+    { '>', '>', '>', '>', '>', 'e', 'e', '>', '>' }, // i
+    { '<', '<', '<', '<', '<', '<', '<', '=', 'e' }, // (
+    { '>', '>', '>', '>', '>', 'e', 'e', '>', '>' }, // )
+    { '<', '<', '<', '<', '<', '<', '<', '<', '>' }  // $
+};
+
+int getindex(char c) {
+    switch (c) {
+        case '+': return 0;
+        case '-': return 1;
+        case '*': return 2;
+        case '/': return 3;
+        case '^': return 4;
+        case 'i': return 5;
+        case '(': return 6;
+        case ')': return 7;
+        case '$': return 8;
+        default: return -1;
+    }
+}
+
+void display_stack() {
+    for (int j = 0; j <= top; j++)
+        printf("%c", stack[j]);
+}
+
+void display_input() {
+    printf("%s", input + i);
+}
+
+void shift() {
+    stack[++top] = input[i++];
+    stack[top + 1] = '\0';
+}
+
+int reduce() {
+    int len, found, t;
+    for (int i = 0; i < 5; i++) {
+        len = strlen(handles[i]);
+        if (top + 1 >= len) {
+            found = 1;
+            for (t = 0; t < len; t++) {
+                if (stack[top - t] != handles[i][len - t - 1]) {
+                    found = 0;
+                    break;
+                }
+            }
+            if (found) {
+                top = top - len + 1;
+                stack[top] = 'E';
+                stack[top + 1] = '\0';
+                strcpy(lasthandle, handles[i]);
+                return 1;
+            }
+        }
+    }
+    return 0;
+}
+
+int main() {
+    stack[0] = '$';
+    stack[1] = '\0';
+
+    input = (char *)malloc(50 * sizeof(char));
+    printf("Enter the input string ending with $: ");
+    scanf("%s", input);
+
+    printf("\nStack\t\tInput\t\tAction\n");
+    printf("---------------------------------------\n");
+
+    while (1) {
+        display_stack();
+        printf("\t\t");
+        display_input();
+        printf("\t\t");
+
+        char relation = prec[getindex(stack[top])][getindex(input[i])];
+
+        if (relation == '<' || relation == '=') {
+            printf("Shift %c\n", input[i]);
+            shift();
+        } else if (relation == '>') {
+            while (reduce()) {
+                display_stack();
+                printf("\t\t");
+                display_input();
+                printf("\t\tReduced: E->%s\n", lasthandle);
+            }
+        } else {
+            break;
+        }
+    }
+
+    if (strcmp(stack, "$E$") == 0)
+        printf("\nAccepted.\n");
+    else
+        printf("\nNot Accepted.\n");
+
+    free(input);
+    return 0;
+}
